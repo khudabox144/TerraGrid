@@ -1,59 +1,62 @@
 package com.terragrid.controller;
 
 import com.terragrid.dto.UserCreateRequest;
-import com.terragrid.model.User;
-import com.terragrid.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.terragrid.dto.UserResponse;
+import com.terragrid.dto.UserUpdateRequest;
+import com.terragrid.service.UserService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
 @PreAuthorize("hasRole('ADMIN')")
+@RequiredArgsConstructor
+@Slf4j
 public class UsersController {
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final UserService userService;
 
     @GetMapping
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public ResponseEntity<List<UserResponse>> getAllUsers() {
+        log.info("Fetching all users");
+        List<UserResponse> users = userService.getAllUsers();
+        return ResponseEntity.ok(users);
     }
 
     @PostMapping
-    public User createUser(@RequestBody UserCreateRequest request) {
-        User user = User.builder()
-                .name(request.getName())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
-                .isActive(true)
-                .build();
-        return userRepository.save(user);
+    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserCreateRequest request) {
+        log.info("Creating new user with email: {}", request.getEmail());
+        UserResponse createdUser = userService.createUser(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
 
     @PatchMapping("/{id}/role")
-    public ResponseEntity<User> patchUser(
+    public ResponseEntity<UserResponse> updateUserRole(
             @PathVariable Integer id,
-            @RequestBody Map<String, Object> updates) {
-        return userRepository.findById(id)
-                .map(user -> {
-                    if (updates.containsKey("role")) {
-                        user.setRole(com.terragrid.model.Role.valueOf((String) updates.get("role")));
-                    }
-                    if (updates.containsKey("isActive")) {
-                        user.setIsActive((Boolean) updates.get("isActive"));
-                    }
-                    return ResponseEntity.ok(userRepository.save(user));
-                })
-                .orElse(ResponseEntity.notFound().build());
+            @Valid @RequestBody UserUpdateRequest request) {
+        log.info("Updating user with ID: {}", id);
+        UserResponse updatedUser = userService.updateUser(id, request);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Integer id) {
+        log.info("Deleting user with ID: {}", id);
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<UserResponse> getUserById(@PathVariable Integer id) {
+        log.info("Fetching user with ID: {}", id);
+        UserResponse user = userService.getUserById(id);
+        return ResponseEntity.ok(user);
     }
 }
