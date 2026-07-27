@@ -230,6 +230,6 @@ buildNumber.properties
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
 
-application.properties
+# application.properties
 
 # End of https://www.toptal.com/developers/gitignore/api/maven
